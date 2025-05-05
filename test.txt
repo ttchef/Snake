@@ -1,0 +1,141 @@
+
+#include <stdlib.h> 
+#include <stdint.h> 
+#include <stdio.h>
+#include <time.h>
+
+#include "raylib.h"
+#include "rlgl.h"
+#include "raymath.h"
+
+#define UP 0x1
+#define DOWN 0x2
+#define LEFT 0x3
+#define RIGHT 0x4
+
+#define SCREENWIDTH 640
+#define SCREENHEIGHT 640 
+#define GRIDSIZE 64 
+#define NUMCELLS 10
+#define SPEED 1.0f
+
+typedef struct {
+    Vector2 pos;
+    uint8_t direction;
+} body;
+
+void handle_input(uint8_t* input_direction) {
+    // Input
+    if (IsKeyDown(KEY_W)) *input_direction = UP;
+    if (IsKeyDown(KEY_S)) *input_direction = DOWN;
+    if (IsKeyDown(KEY_A)) *input_direction = LEFT;
+    if (IsKeyDown(KEY_D)) *input_direction = RIGHT;
+
+}
+
+void draw(body* snake, Vector2 apple_pos, uint32_t length, uint8_t direction) {
+    BeginDrawing();
+        ClearBackground(BLACK);
+
+        // Draw Map
+        uint16_t k = 0;
+        for (int i = 0; i < NUMCELLS; i++) {
+            for (int j = 0; j < NUMCELLS; j++) {
+                k++;
+                Color color = k % 2 ? DARKGREEN : LIME;
+                DrawRectangle(i*GRIDSIZE, j*GRIDSIZE, GRIDSIZE-1, GRIDSIZE-1, color);
+            }
+            k++;
+        }
+
+        // Draw Apple 
+        DrawCircleV((Vector2){apple_pos.x+GRIDSIZE/2, apple_pos.y+GRIDSIZE/2}, (GRIDSIZE/2)-5, RED);
+            
+        // Draw Snake Body
+        for (int i = 1; i < length; i++) {
+            Rectangle rect = {snake[i].pos.x+2, snake[i].pos.y+2, GRIDSIZE-4, GRIDSIZE-4};
+            DrawRectangleRounded(rect, 0.1f, 1, BLUE);
+        }
+
+        // Draw Head
+        Rectangle rect = {snake[0].pos.x+2, snake[0].pos.y+2, GRIDSIZE-4, GRIDSIZE-4};
+        DrawRectangleRounded(rect, 0.5f, 1, BLUE);
+        EndDrawing();
+}
+
+Vector2 random_pos() {
+    uint16_t x = (rand() % NUMCELLS)*GRIDSIZE;
+    uint16_t y = (rand() % NUMCELLS)*GRIDSIZE;
+    return (Vector2){x,y};
+}
+
+void init(Vector2* head_pos, uint8_t* direction, uint32_t* length, Vector2* apple_pos, uint8_t* input_direction) {
+    *head_pos = (Vector2){ (float)SCREENWIDTH/2, (float)SCREENHEIGHT/2 };
+    *direction = DOWN;
+    *input_direction = DOWN;
+    *length = 1; // From head 
+    *apple_pos = random_pos();
+}
+
+int main ()
+{
+    // Init
+    srand(time(NULL));
+    InitWindow(SCREENWIDTH, SCREENHEIGHT, "Mef-Window");
+    SetTargetFPS(240);
+
+    body snake[100];
+    Vector2 apple_pos; uint8_t input_direction; uint32_t length;
+    init(&snake[0].pos, &snake[0].direction, &length, &apple_pos, &input_direction);
+
+    while (!WindowShouldClose()) {
+
+
+
+        handle_input(&input_direction);
+
+        Vector2 backup_pos;
+
+        // Handle Moving
+        if ((uint32_t)snake[0].pos.x % GRIDSIZE == 0 && (uint32_t)snake[0].pos.y % GRIDSIZE == 0) {
+            snake[0].direction = input_direction;
+
+            backup_pos = snake[length-1].pos;
+        
+  
+        }
+
+        for (int i = length - 1; i > 0; i--) {
+            snake[i].direction = snake[i - 1].direction;
+        }
+
+    
+      
+
+        for (int i = 0; i < length; i++) {
+            switch (snake[i].direction) {
+            case UP: snake[i].pos.y -= SPEED; break;
+            case DOWN: snake[i].pos.y += SPEED; break;
+            case LEFT: snake[i].pos.x -= SPEED; break;
+            case RIGHT: snake[i].pos.x += SPEED; break;
+            }
+            //printf("Snake: %d X: %f Y: %f Direction: %d\n", i, snake[i].pos.x, snake[i].pos.y, snake[i].direction);
+
+        }
+
+        // Collision
+        if (snake[0].pos.x == apple_pos.x && snake[0].pos.y == apple_pos.y) {
+            length++;
+            snake[length-1].pos = backup_pos;
+            apple_pos = random_pos();
+        }
+
+        draw(snake, apple_pos, length, snake[0].direction);
+        
+    }
+
+    CloseWindow();
+    return 0;
+}
+
+
